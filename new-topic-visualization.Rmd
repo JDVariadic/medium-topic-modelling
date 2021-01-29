@@ -1,0 +1,93 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+#Open the RDATA file titled full_topic_30_lda_model_variables.RData
+#install.packages('topicmodels')
+load("full_topic_model_40.RData")
+load("trimmed_dtm.RData")
+terms(topic_model_40, 15)
+topic_model_40_beta <- tidy(topic_model_40, matrix='beta')
+```
+
+```{r}
+#Get top 15 words for each topic
+organized_word_by_beta <- topic_model_40_beta %>%
+  group_by(topic) %>%
+  top_n(15, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) #%>%
+
+#Plot a bar graph containing the words and their corresponding beta values for each topic and save it as a png image
+
+for(i in 1:40) {
+  topic_graph <- ggplot(data=subset(organized_word_by_beta, topic==i), aes(x=term, y=beta)) + geom_bar(stat="identity") + geom_point() + labs(title=paste("Topic", i, "graph.png"))
+  png(paste("topic_",i,"_graph_out_of_40.png"))
+  print(topic_graph)
+  dev.off()
+}
+```
+
+```{r}
+#gridExtra is used to print tables/graphs into an iamge file.
+library(gridExtra)
+for(i in 1:40) {
+  curr_table = subset(organized_word_by_beta, topic==i)
+  png(paste("topic_",i,"_table_out_of_40.png"), height = 25*nrow(curr_table), width = 100*ncol(curr_table))
+  grid.table(curr_table)
+  dev.off()
+}
+```
+
+```{r}
+#Wordcloud is written on temporary HTML file which is then converted into an image.
+#install.packages('webshot')
+install.packages('wordcloud2')
+library(wordcloud2)
+library(webshot)
+webshot::install_phantomjs()
+library(htmlwidgets)
+
+for(i in 1:40){
+  model_results <- posterior(topic_model_40)
+  wordcloud_topic <- i
+  # Sort by decreasing order of topic
+  top20 <- sort(model_results$terms[wordcloud_topic,], decreasing=TRUE)[1:20]
+  words <- names(top20)
+  probabilities <- sort(model_results$terms[wordcloud_topic,], decreasing=TRUE)[1:20]
+  my_cloud <- wordcloud2(data.frame(words, probabilities), shuffle = FALSE, size = 0.8)
+  saveWidget(my_cloud, 'cloud.html', selfcontained=F)
+  webshot("cloud.html",paste("cloud",i,"_out_of_40.png"), delay = 5, vwidth = 480, vheight=480)
+}
+```
+
+
+```{r}
+#Concatenate top 7 topic terms for each topic to label the name. Will be used to calculate the proportions of each topic.
+topicNames <- apply(terms(topic_model_40, 7), 2, paste, collapse = " ")
+```
+```{r}
+#Create a list of topic proportions.
+model_results <- posterior(topic_model_40)
+theta <- model_results$topics
+topicProportions <- colSums(theta) / nrow(trimmed_dtm) 
+names(topicProportions) <- topicNames     
+sort(topicProportions, decreasing = TRUE) 
+```
+
+```{r}
+#Save sorted theta values to a dataframe with topics labeled.
+theta_df <- as.data.frame(topicProportions)
+theta_df['topic'] <- 1:40
+theta_df <- theta_df[order(-topicProportions),]
+png("topic_proportions.png", height = 25*nrow(theta_df), width = 400*ncol(theta_df))
+grid.table(theta_df)
+dev.off()
+```
+

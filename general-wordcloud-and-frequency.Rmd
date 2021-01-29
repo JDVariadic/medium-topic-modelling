@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(wordcloud2)
+library(igraph)
+library(ggraph)
+library(widyr)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+data <- read.csv('datasets/medium_english_data_formatted_v3.csv', encoding="UTF-8")
+```
+
+
+```{r}
+text_df <- as_tibble(data)
+```
+
+```{r}
+# Tokenize dataset by words and remove stopwords.
+data(stop_words)
+tokenized_data <- text_df['text_data'] %>% #text_df[,c('post_id', 'article_title', 'text_data')] %>%
+  unnest_tokens(word, text_data, to_lower = TRUE) %>%
+  #unnest_tokens()
+  #left_join(stop_words, text_df, by=c('word'='text_data')) %>%
+  anti_join(stop_words, by='word') %>%
+  filter(word != "medium") %>%
+  filter(word != "mediumget") %>%
+  filter(!word %in% 0:100) %>%
+  filter(word != 'll') %>%
+  filter(word != '000') %>%
+  filter(word != 'www') %>%
+  filter(word != 'don') %>%
+  filter(word != 'followersaboutget') %>%
+  filter(word != 've') %>%
+  filter(word != 'app') %>%
+  filter(word != 'min') %>%
+  filter(word != 'isn') %>%
+  filter(word != 'startedopen') %>%
+  filter(word != 'coronavirus') %>%
+  filter(word != 'covid') %>%
+  filter(word != 'virus') %>%
+  filter(word != 'followersaboutfollowsign') %>%
+  filter(word != '2020medium') %>%
+  filter(word != 'didn') %>%
+  filter(word != '200a') %>%
+  filter(word != 'aren') %>%
+  filter(word != 'de')
+```
+
+```{r}
+#Save wordcloud based on frequency. 
+library(webshot)
+webshot::install_phantomjs()
+library(htmlwidgets)
+
+my_cloud <- tokenized_data %>%
+count(word, name = "freq", sort = TRUE) %>%
+wordcloud2(
+         size = 1,
+         shape = "diamond",
+         color = "random-light",
+         background = "black",
+         minRotation = 0,
+         maxRotation = 0)
+saveWidget(my_cloud, 'cloud.html', selfcontained=F)
+webshot("cloud.html","general_wordcloud.png", delay = 5, vwidth = 1200, vheight=800)
+
+```
+```{r}
+#Get actual values of frequency
+table_count <- tokenized_data %>%
+  count(word, name='freq', sort=TRUE)
+
+```
+```{r}
+save(table_count, file='top_word_frequencies.RData')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

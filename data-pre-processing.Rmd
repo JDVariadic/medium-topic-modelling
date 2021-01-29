@@ -1,0 +1,62 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r loading packages, message=F, warning=F}
+library(tidyverse)
+library(tidytext)
+library(wordcloud2)
+library(igraph)
+library(ggraph)
+library(widyr)
+library(textcat)
+```
+
+
+```{r}
+data <- read.csv('medium_final_data.csv', encoding="UTF-8")
+```
+```{r}
+nrow(data)
+```
+
+```{r}
+no_duplicates <- subset(data, !duplicated(subset(data, select=c(post_id))))
+nrow(no_duplicates)
+no_duplicates[ ,c('X', 'Unnamed..0')] <- list(NULL)
+no_duplicates['language'] <- NA
+```
+
+```{r}
+for(i in 1:nrow(no_duplicates)){
+  if(i %% 1000 == 0){
+    print(i)
+  }
+  current_text <- no_duplicates[i, c('text_data')]
+  current_text <- gsub('http\\S+\\s*', '', current_text)
+  no_duplicates[i, c('text_data')] <- current_text
+  no_duplicates[i, c('language')] <- textcat(current_text)
+}
+```
+
+```{r}
+english_only <- filter(no_duplicates, language == 'english')
+nrow(english_only)
+write.csv(english_only,"medium_english_data_formatted_v3.csv", row.names = FALSE)
+```
+
+
+
+
+

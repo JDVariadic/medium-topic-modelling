@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+```{r}
+library('dplyr')
+```
+
+```{r}
+load("RDATA FILES/full_topic_30_lda_model_variables.RData")
+```
+
+```{r}
+#Due to hardware limitations, log likelihood estimates are done in the intervals 25-35, 20 was chosen because of its log likelihood values and extrapolation.
+
+mod_log_lik = numeric(10)
+mod_range = 30:40
+for (i in mod_range){
+  print(i)
+  mod = LDA(trimmed_dtm, k=i, method="Gibbs", control=list(iter = 1000, seed = 1, verbose = 200))
+mod_log_lik[i] = logLik(mod)
+}
+
+mod_log_lik_values <- mod_log_lik[30:40]
+mod_log_lik_values
+
+save(mod_log_lik_values, file='mod_log_lik_30_40.RData')
+
+```
+
+```{r}
+load('RDATA FILES/mod_log_lik.RData')
+tibble(k=30:40, Score = mod_log_lik_values) %>%
+  top_n(3,Score) %>%
+  arrange(-Score)
+```
+
+
+
+```{r log_lik plot}
+#Log lik of 20 -74481429. Loop only tested from 25-35 due to hardware/time issues. 20 has the most-log-likelihood among the options so it is chosen. K values of 20 and 30 are also compared and 20 shows more sensible topics from intuition.
+plot(x=30:40,y=mod_log_lik_values)
+```
+```{r}
+mod_log_lik_values
+```
+
